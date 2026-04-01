@@ -1,0 +1,175 @@
+import React, { useState, useEffect } from 'react';
+import { Lightbulb, CheckCircle2, XCircle, RefreshCw, Trophy, Hash } from 'lucide-react';
+
+const App = () => {
+  const [targetNumber, setTargetNumber] = useState(0);
+  const [hints, setHints] = useState([]);
+  const [guess, setGuess] = useState('');
+  const [message, setMessage] = useState(null);
+  const [gameState, setGameState] = useState('playing'); // 'playing', 'won'
+  const [attempts, setAttempts] = useState(0);
+
+  // Generar un número de dos dígits i les seves pistes
+  const generateGame = () => {
+    const num = Math.floor(Math.random() * 90) + 10; // Entre 10 i 99
+    setTargetNumber(num);
+    
+    const newHints = [];
+    const digits = num.toString().split('').map(Number);
+    const sumDigits = digits[0] + digits[1];
+
+    // Pista 1: Parell o Imparell
+    newHints.push({
+      text: `El número és ${num % 2 === 0 ? 'parell' : 'imparell'}.`,
+      completed: false
+    });
+
+    // Pista 2: Suma de dígits
+    const threshold = 6;
+    newHints.push({
+      text: `La suma dels seus dígits és ${sumDigits > threshold ? 'superior' : 'inferior o igual'} a ${threshold}.`,
+      completed: false
+    });
+
+    // Pista 3: Multiplicitat/Divisibilitat (cercant un factor interessant)
+    if (num % 3 === 0) {
+      newHints.push({ text: "És un múltiple de 3.", completed: false });
+    } else if (num % 5 === 0) {
+      newHints.push({ text: "És un múltiple de 5.", completed: false });
+    } else {
+      newHints.push({ text: `No és divisible ni per 3 ni per 5.`, completed: false });
+    }
+
+    // Pista 4: Comparació de dígits
+    if (digits[0] === digits[1]) {
+      newHints.push({ text: "Té els dos dígits iguals.", completed: false });
+    } else {
+      newHints.push({ text: `El primer dígit és ${digits[0] > digits[1] ? 'més gran' : 'més petit'} que el segon.`, completed: false });
+    }
+
+    // Pista 5: Rang de proximitat
+    const rangeStart = Math.floor(num / 10) * 10;
+    newHints.push({
+      text: `Es troba a la desena dels ${rangeStart} (entre ${rangeStart} i ${rangeStart + 9}).`,
+      completed: false
+    });
+
+    setHints(newHints);
+    setGuess('');
+    setMessage(null);
+    setGameState('playing');
+    setAttempts(0);
+  };
+
+  useEffect(() => {
+    generateGame();
+  }, []);
+
+  const handleGuess = (e) => {
+    e.preventDefault();
+    const numGuess = parseInt(guess);
+    
+    if (isNaN(numGuess) || numGuess < 10 || numGuess > 99) {
+      setMessage({ type: 'error', text: 'Si us plau, introdueix un número de dos dígits.' });
+      return;
+    }
+
+    setAttempts(prev => prev + 1);
+
+    if (numGuess === targetNumber) {
+      setGameState('won');
+      setMessage({ type: 'success', text: `Felicitats! Has encertat el número ${targetNumber}!` });
+    } else {
+      setMessage({ type: 'error', text: 'Aquest no és el número. Torna-ho a intentar!' });
+      setGuess('');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 font-sans text-slate-800">
+      <div className="max-w-md w-full bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
+        {/* Header */}
+        <div className="bg-indigo-600 p-6 text-white text-center">
+          <Hash className="w-12 h-12 mx-auto mb-2 opacity-80" />
+          <h1 className="text-2xl font-bold">El Número Secret</h1>
+          <p className="text-indigo-100 mt-1">Troba el número de dos dígits ocult</p>
+        </div>
+
+        <div className="p-6">
+          {/* Hints Section */}
+          <div className="space-y-3 mb-8">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+              <Lightbulb size={16} /> Pistes del Repte
+            </h2>
+            {hints.map((hint, index) => (
+              <div 
+                key={index} 
+                className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 transition-all hover:bg-slate-100"
+              >
+                <div className="bg-indigo-100 text-indigo-600 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs font-bold">
+                  {index + 1}
+                </div>
+                <p className="text-slate-700 text-sm leading-relaxed">{hint.text}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Interaction Section */}
+          {gameState === 'playing' ? (
+            <form onSubmit={handleGuess} className="space-y-4">
+              <div>
+                <input
+                  type="number"
+                  value={guess}
+                  onChange={(e) => setGuess(e.target.value)}
+                  placeholder="Quin número és?"
+                  className="w-full text-center text-3xl font-bold p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-indigo-500 focus:ring-0 transition-colors outline-none"
+                  autoFocus
+                />
+              </div>
+              
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg active:scale-95"
+              >
+                Comprovar
+              </button>
+            </form>
+          ) : (
+            <div className="text-center py-4">
+              <div className="flex justify-center mb-4">
+                <div className="bg-amber-100 p-4 rounded-full">
+                  <Trophy className="w-12 h-12 text-amber-500" />
+                </div>
+              </div>
+              <p className="text-sm text-slate-500 mb-6">Ho has aconseguit en {attempts} {attempts === 1 ? 'intent' : 'intents'}.</p>
+              <button
+                onClick={generateGame}
+                className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-2xl transition-all shadow-lg"
+              >
+                <RefreshCw size={20} /> Jugar de nou
+              </button>
+            </div>
+          )}
+
+          {/* Message Feedback */}
+          {message && (
+            <div className={`mt-6 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 ${
+              message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'
+            }`}>
+              {message.type === 'success' ? <CheckCircle2 size={20} /> : <XCircle size={20} />}
+              <span className="text-sm font-medium">{message.text}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <footer className="mt-8 text-slate-400 text-xs text-center leading-relaxed">
+        Posa a prova la teva lògica matemàtica.<br />
+        Creat per a practicar divisibilitat i sumes.
+      </footer>
+    </div>
+  );
+};
+
+export default App;
